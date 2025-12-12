@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ESP32 Temperature Monitor</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; }
+        .data-display { font-size: 2em; margin: 20px; }
+        .alert { color: red; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>🌡️ ESP32 Climate Monitor</h1>
+    
+    <div class="data-display">
+        Current Temp: <span id="current-temp">--</span>°C <br>
+        Current Humidity: <span id="current-humidity">--</span>%
+    </div>
+
+    <hr>
+    
+    <h2>Set Buzzer Threshold</h2>
+    <div>
+        <label for="threshold-input">Current Threshold: </label>
+        <input type="number" id="threshold-input" value="28.0" step="0.5"> °C
+        <button onclick="setNewThreshold()">Save Threshold</button>
+    </div>
+    <p id="threshold-status"></p>
+
+    <script>
+        const endpoint_data = '/api/get_data';
+        const endpoint_set = '/api/set_threshold';
+
+        // --- FETCH AND DISPLAY DATA ---
+        function fetchData() {
+            fetch(endpoint_data)
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('current-temp').textContent = data.temperature.toFixed(1);
+                    document.getElementById('current-humidity').textContent = data.humidity.toFixed(1);
+                    document.getElementById('threshold-input').value = data.threshold.toFixed(1);
+                })
+                .catch(error => console.error('Error fetching data:', error));
+        }
+
+        // --- SEND NEW THRESHOLD ---
+        function setNewThreshold() {
+            const newThreshold = parseFloat(document.getElementById('threshold-input').value);
+            
+            fetch(endpoint_set, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ threshold: newThreshold })
+            })
+            .then(response => response.json())
+            .then(data => {
+                const status = document.getElementById('threshold-status');
+                status.textContent = data.message || data.error;
+                status.style.color = data.error ? 'red' : 'green';
+                // Clear status after a few seconds
+                setTimeout(() => { status.textContent = ''; }, 3000);
+            })
+            .catch(error => console.error('Error setting threshold:', error));
+        }
+
+        // Fetch data immediately and then every 5 seconds
+        fetchData(); 
+        setInterval(fetchData, 5000); 
+    </script>
+</body>
+</html>
