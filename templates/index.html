@@ -1,167 +1,197 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ESP32 Climate Monitor</title>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
-    
     <style>
-        /* Modern & High-Tech CSS */
-        :root {
-            --dark-bg: #1e1e1e;
-            --card-bg: #2a2a2a;
-            --text-color: #e0e0e0;
-            --primary-color: #00bcd4; /* Cyan/Aqua color for "tech" feel */
-            --border-radius: 8px;
-            --warning-color: #ff9800;
-        }
-
         body {
-            font-family: 'Roboto Mono', monospace; /* Monospace font for high-tech feel */
-            background-color: var(--dark-bg);
-            color: var(--text-color);
-            margin: 0;
-            padding: 20px;
+            background: #0a0f1f;
+            color: #00eaff;
+            font-family: "Segoe UI", Arial, sans-serif;
             text-align: center;
-        }
-
-        .container {
-            max-width: 700px;
-            margin: 0 auto;
+            padding: 20px;
         }
 
         h1 {
-            color: var(--primary-color);
-            font-weight: 700;
-            letter-spacing: 2px;
-            margin-bottom: 40px;
-            text-transform: uppercase;
-        }
-
-        /* Data Display Cards */
-        .data-grid {
-            display: flex;
-            justify-content: space-around;
-            gap: 20px;
-            margin-bottom: 40px;
-        }
-
-        .data-card {
-            background-color: var(--card-bg);
-            border: 2px solid var(--primary-color);
-            border-radius: var(--border-radius);
-            padding: 20px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
-            flex-grow: 1;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-        
-        .data-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.8);
-        }
-
-        .data-label {
-            font-size: 1.1em;
-            margin-bottom: 10px;
-            color: var(--text-color);
-            text-transform: uppercase;
-        }
-
-        .data-value {
             font-size: 2.5em;
-            font-weight: 700;
-            color: var(--primary-color);
-        }
-
-        /* Threshold/Form Section */
-        .settings-card {
-            background-color: var(--card-bg);
-            border: 1px solid var(--text-color);
-            border-radius: var(--border-radius);
-            padding: 30px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
-            text-align: left;
-        }
-        
-        h2 {
-            color: var(--warning-color);
-            margin-top: 0;
-            border-bottom: 2px solid var(--warning-color);
-            padding-bottom: 10px;
+            text-shadow: 0 0 20px #00eaff;
             margin-bottom: 20px;
         }
 
-        /* Form Styling */
-        form label {
-            font-size: 1em;
-            display: block;
-            margin-bottom: 10px;
+        .card {
+            background: rgba(5, 20, 40, 0.8);
+            width: 350px;
+            margin: auto;
+            padding: 25px;
+            border-radius: 20px;
+            box-shadow: 0 0 25px #00eaff44;
+            border: 1px solid #00eaff88;
         }
 
-        form input[type="number"] {
-            background-color: #333;
-            color: var(--text-color);
-            border: 1px solid var(--primary-color);
-            border-radius: 4px;
-            padding: 8px;
-            width: 150px;
-            font-size: 1em;
-            margin-right: 10px;
+        .data {
+            font-size: 2em;
+            margin: 15px 0;
+            text-shadow: 0 0 10px #00eaff;
         }
 
-        form button {
-            background-color: var(--primary-color);
-            color: var(--dark-bg);
+        .status-box {
+            margin-top: 20px;
+            padding: 12px;
+            font-size: 1.3em;
+            border-radius: 12px;
+            border: 2px solid;
+            width: 250px;
+            margin-left: auto;
+            margin-right: auto;
+            transition: 0.3s;
+        }
+
+        /* STATUS COLORS */
+        .ok {
+            color: #00ff99;
+            border-color: #00ff99;
+            box-shadow: 0 0 10px #00ff9944;
+        }
+
+        .alert {
+            color: #ff4d4d;
+            border-color: #ff4d4d;
+            box-shadow: 0 0 15px #ff4d4d66;
+        }
+
+        /* BUZZER ICON */
+        .buzzer {
+            font-size: 70px;
+            margin-top: 20px;
+            transition: 0.3s;
+            text-shadow: 0 0 10px;
+        }
+
+        .buzzer-off {
+            color: #555;
+            text-shadow: none;
+        }
+
+        .buzzer-on {
+            color: #ff4d4d;
+            text-shadow: 0 0 25px #ff1a1a;
+            animation: pulse 0.8s infinite alternate;
+        }
+
+        @keyframes pulse {
+            from { transform: scale(1); }
+            to { transform: scale(1.1); }
+        }
+
+        /* Threshold UI */
+        input {
+            padding: 6px;
+            font-size: 1em;
+            border-radius: 6px;
             border: none;
-            border-radius: 4px;
-            padding: 10px 20px;
-            font-weight: 700;
-            cursor: pointer;
-            transition: background-color 0.2s;
+            width: 80px;
         }
 
-        form button:hover {
-            background-color: #00e5ff;
+        button {
+            padding: 8px 15px;
+            border-radius: 8px;
+            border: none;
+            background: #00eaff;
+            color: #000;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        button:hover {
+            background: #00bcd4;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>ESP32 Climate Monitor // Terminal Status</h1>
 
-        <div class="data-grid">
-            <div class="data-card">
-                <div class="data-label">Temperature</div>
-                <div class="data-value">{{ current_temp }}°C</div>
-            </div>
-            
-            <div class="data-card">
-                <div class="data-label">Humidity</div>
-                <div class="data-value">{{ current_humidity }}%</div>
-            </div>
+    <h1>ESP32 HIGH-TECH CLIMATE MONITOR</h1>
+
+    <div class="card">
+        <div class="data">
+            🌡 Temp: <span id="current-temp">--</span>°C
         </div>
 
-        <div class="settings-card">
-            <h2>System Control // Set Threshold</h2>
-            <form action="{{ url_for('set_threshold') }}" method="post">
-                <label for="threshold">
-                    Current Warning Threshold: 
-                    <span style="color: var(--warning-color); font-weight: bold;">{{ threshold_temp }}°C</span>
-                </label>
-                
-                <input 
-                    type="number" 
-                    id="threshold" 
-                    name="threshold" 
-                    value="{{ threshold_temp }}" 
-                    step="0.1" 
-                    required
-                >
-                <button type="submit">Update Threshold</button>
-            </form>
+        <div class="data">
+            💧 Humidity: <span id="current-humidity">--</span>%
         </div>
+
+        <div class="status-box ok" id="status-box">
+            SYSTEM NORMAL
+        </div>
+
+        <!-- BUZZER ICON -->
+        <div id="buzzer-icon" class="buzzer buzzer-off">🔔</div>
+
+        <hr style="margin: 25px; border-color: #00eaff55;">
+
+        <h3>Set Temp Threshold</h3>
+
+        <input type="number" step="0.5" id="threshold-input" value="28.0">
+        <button onclick="setNewThreshold()">Save</button>
+
+        <p id="threshold-status"></p>
     </div>
+
+    <script>
+        const endpoint_data = '/api/get_data';
+        const endpoint_set = '/api/set_threshold';
+
+        function fetchData() {
+            fetch(endpoint_data)
+            .then(res => res.json())
+            .then(data => {
+                const temp = data.temperature;
+                const hum = data.humidity;
+                const th = data.threshold;
+                
+                document.getElementById('current-temp').textContent = temp.toFixed(1);
+                document.getElementById('current-humidity').textContent = hum.toFixed(1);
+                document.getElementById('threshold-input').value = th.toFixed(1);
+
+                const statusBox = document.getElementById('status-box');
+                const buzzer = document.getElementById('buzzer-icon');
+
+                if (temp >= th) {
+                    statusBox.textContent = "🔥 ALERT: Temperature Above Threshold!";
+                    statusBox.className = "status-box alert";
+
+                    buzzer.className = "buzzer buzzer-on";  // Glow red
+                } else {
+                    statusBox.textContent = "SYSTEM NORMAL";
+                    statusBox.className = "status-box ok";
+
+                    buzzer.className = "buzzer buzzer-off"; // Gray/Off
+                }
+            })
+            .catch(err => console.log('Fetch error:', err));
+        }
+
+        function setNewThreshold() {
+            const newTh = parseFloat(document.getElementById('threshold-input').value);
+
+            fetch(endpoint_set, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ threshold: newTh })
+            })
+            .then(res => res.json())
+            .then(data => {
+                const msg = document.getElementById('threshold-status');
+                msg.textContent = data.message || data.error;
+                msg.style.color = data.error ? 'red' : 'lime';
+
+                setTimeout(() => msg.textContent = '', 3000);
+            });
+        }
+
+        setInterval(fetchData, 3000);
+        fetchData();
+    </script>
+
 </body>
 </html>
