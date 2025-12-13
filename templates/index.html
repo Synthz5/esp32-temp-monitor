@@ -1,197 +1,124 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="en">
 <head>
-    <title>ESP32 Climate Monitor</title>
-    <style>
-        body {
-            background: #0a0f1f;
-            color: #00eaff;
-            font-family: "Segoe UI", Arial, sans-serif;
-            text-align: center;
-            padding: 20px;
-        }
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>ESP32 · DHT22 · High‑Tech Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    :root{
+      --bg:#041025; --card:#061827; --accent:#00f6ff; --accent-2:#7c4dff; --glass: rgba(255,255,255,0.04);
+      --success:#25d366; --danger:#ff3860; --muted:rgba(255,255,255,0.55);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,'Helvetica Neue',Arial;color:#e6f7ff;background:linear-gradient(180deg,#00101a 0%,#041025 60%);-webkit-font-smoothing:antialiased}
+    .wrap{max-width:1200px;margin:28px auto;padding:24px}
+    header{display:flex;gap:20px;align-items:center;margin-bottom:18px}
+    .logo{display:flex;flex-direction:column}
+    .brand{font-weight:800;font-size:20px;letter-spacing:0.4px}
+    .sub{color:var(--muted);font-size:12px}
 
-        h1 {
-            font-size: 2.5em;
-            text-shadow: 0 0 20px #00eaff;
-            margin-bottom: 20px;
-        }
+    .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:18px}
+    .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border:1px solid rgba(255,255,255,0.04);padding:18px;border-radius:14px;box-shadow:0 6px 18px rgba(3,6,12,0.6)}
+    .span-4{grid-column:span 4}
+    .span-8{grid-column:span 8}
+    .flex{display:flex;align-items:center;gap:12px}
 
-        .card {
-            background: rgba(5, 20, 40, 0.8);
-            width: 350px;
-            margin: auto;
-            padding: 25px;
-            border-radius: 20px;
-            box-shadow: 0 0 25px #00eaff44;
-            border: 1px solid #00eaff88;
-        }
+    .big-value{font-size:44px;font-weight:700}
+    .muted{color:var(--muted)}
 
-        .data {
-            font-size: 2em;
-            margin: 15px 0;
-            text-shadow: 0 0 10px #00eaff;
-        }
+    .controls{display:flex;gap:10px;align-items:center}
+    .btn{background:linear-gradient(90deg,var(--accent),var(--accent-2));border:none;color:#00111a;padding:8px 12px;border-radius:10px;font-weight:600;cursor:pointer}
+    .btn-ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--muted)}
 
-        .status-box {
-            margin-top: 20px;
-            padding: 12px;
-            font-size: 1.3em;
-            border-radius: 12px;
-            border: 2px solid;
-            width: 250px;
-            margin-left: auto;
-            margin-right: auto;
-            transition: 0.3s;
-        }
+    .threshold{display:flex;gap:8px;align-items:center}
+    input[type=range]{width:180px}
 
-        /* STATUS COLORS */
-        .ok {
-            color: #00ff99;
-            border-color: #00ff99;
-            box-shadow: 0 0 10px #00ff9944;
-        }
+    .status-dot{width:12px;height:12px;border-radius:999px;background:var(--danger);box-shadow:0 0 8px rgba(255,0,0,0.14)}
+    .status-ok{background:var(--success);box-shadow:0 0 8px rgba(37,211,102,0.14)}
 
-        .alert {
-            color: #ff4d4d;
-            border-color: #ff4d4d;
-            box-shadow: 0 0 15px #ff4d4d66;
-        }
+    .chart-wrap{height:260px}
+    .log{max-height:220px;overflow:auto;font-size:13px;color:var(--muted);padding:8px;border-radius:8px;background:linear-gradient(180deg, rgba(255,255,255,0.01), transparent)}
 
-        /* BUZZER ICON */
-        .buzzer {
-            font-size: 70px;
-            margin-top: 20px;
-            transition: 0.3s;
-            text-shadow: 0 0 10px;
-        }
+    footer{margin-top:18px;color:var(--muted);font-size:13px}
 
-        .buzzer-off {
-            color: #555;
-            text-shadow: none;
-        }
+    /* Fancy gauge */
+    .gauge{width:170px;height:170px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--accent) 0deg, transparent 0deg);position:relative}
+    .gauge .center{position:absolute;display:flex;flex-direction:column;align-items:center}
+    .small{font-size:13px;color:var(--muted)}
 
-        .buzzer-on {
-            color: #ff4d4d;
-            text-shadow: 0 0 25px #ff1a1a;
-            animation: pulse 0.8s infinite alternate;
-        }
-
-        @keyframes pulse {
-            from { transform: scale(1); }
-            to { transform: scale(1.1); }
-        }
-
-        /* Threshold UI */
-        input {
-            padding: 6px;
-            font-size: 1em;
-            border-radius: 6px;
-            border: none;
-            width: 80px;
-        }
-
-        button {
-            padding: 8px 15px;
-            border-radius: 8px;
-            border: none;
-            background: #00eaff;
-            color: #000;
-            font-weight: bold;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-
-        button:hover {
-            background: #00bcd4;
-        }
-    </style>
+    @media (max-width:960px){.grid{grid-template-columns:repeat(6,1fr)}.span-8{grid-column:span 6}.span-4{grid-column:span 6}}
+  </style>
 </head>
 <body>
+  <div class="wrap">
+    <header>
+      <div class="logo">
+        <div class="brand">ESP32 · DHT22 Dashboard</div>
+        <div class="sub">Real-time temperature & humidity monitoring — advanced UI with remote buzzer control</div>
+      </div>
+      <div style="margin-left:auto" class="controls">
+        <div id="wsStatus" class="flex"><div id="statusDot" class="status-dot"></div><div id="statusText" style="min-width:120px" class="muted">Disconnected</div></div>
+        <button id="connectBtn" class="btn">Connect WebSocket</button>
+        <button id="simBtn" class="btn-ghost">Start Simulation</button>
+      </div>
+    </header>
 
-    <h1>ESP32 HIGH-TECH CLIMATE MONITOR</h1>
+    <main class="grid">
+      <section class="card span-4">
+        <div class="flex" style="justify-content:space-between;align-items:center">
+          <div>
+            <div class="small muted">Temperature</div>
+            <div class="big-value" id="tempVal">-- °C</div>
+            <div class="muted">Feels like: <span id="feels">-- °C</span></div>
 
-    <div class="card">
-        <div class="data">
-            🌡 Temp: <span id="current-temp">--</span>°C
+<!-- NEW: Temperature threshold inside temperature box -->
+<div class="threshold" style="margin-top:12px">
+  <div class="small muted">Temp threshold (°C)</div>
+  <input id="thresholdInput" type="number" min="0" max="100" value="30" style="width:70px;padding:4px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:#e6f7ff">
+</div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:8px">
+            <div style="width:170px;height:170px;">
+              <div id="gauge" class="gauge" aria-hidden="true"></div>
+            </div>
+            
+          </div>
         </div>
+      </section>
 
-        <div class="data">
-            💧 Humidity: <span id="current-humidity">--</span>%
+      <section class="card span-4">
+        <div class="small muted">Humidity</div>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div class="big-value" id="humVal">-- %</div>
+            <div class="muted">DHT22 sensor</div>
+          </div>
+          
         </div>
-
-        <div class="status-box ok" id="status-box">
-            SYSTEM NORMAL
+        <hr style="opacity:0.06;margin:14px 0">
+        
+          <input id="thresholdRange" type="range" min="0" max="100" value="30">
+          <div id="thresholdLabel" class="muted">30 °C</div>
         </div>
+        <div style="margin-top:10px;display:flex;gap:8px">
+          <button id="forceBuzz" class="btn">Trigger Buzzer</button>
+          <button id="autoBuzzToggle" class="btn-ghost">Auto-Buzz: OFF</button>
+        </div>
+      </section>
 
-        <!-- BUZZER ICON -->
-        <div id="buzzer-icon" class="buzzer buzzer-off">🔔</div>
+      <section class="card span-4">
+        <div class="small muted">Live Chart (temperature)</div>
+        <div class="chart-wrap"><canvas id="tempChart"></canvas></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px">
+          <div class="muted">Samples: <span id="samples">0</span></div>
+          <div id="buzzerIndicator" style="font-weight:700;color:var(--muted)">Buzzer: OFF</div>
+        </div>
+      </section>
 
-        <hr style="margin: 25px; border-color: #00eaff55;">
-
-        <h3>Set Temp Threshold</h3>
-
-        <input type="number" step="0.5" id="threshold-input" value="28.0">
-        <button onclick="setNewThreshold()">Save</button>
-
-        <p id="threshold-status"></p>
-    </div>
-
-    <script>
-        const endpoint_data = '/api/get_data';
-        const endpoint_set = '/api/set_threshold';
-
-        function fetchData() {
-            fetch(endpoint_data)
-            .then(res => res.json())
-            .then(data => {
-                const temp = data.temperature;
-                const hum = data.humidity;
-                const th = data.threshold;
-                
-                document.getElementById('current-temp').textContent = temp.toFixed(1);
-                document.getElementById('current-humidity').textContent = hum.toFixed(1);
-                document.getElementById('threshold-input').value = th.toFixed(1);
-
-                const statusBox = document.getElementById('status-box');
-                const buzzer = document.getElementById('buzzer-icon');
-
-                if (temp >= th) {
-                    statusBox.textContent = "🔥 ALERT: Temperature Above Threshold!";
-                    statusBox.className = "status-box alert";
-
-                    buzzer.className = "buzzer buzzer-on";  // Glow red
-                } else {
-                    statusBox.textContent = "SYSTEM NORMAL";
-                    statusBox.className = "status-box ok";
-
-                    buzzer.className = "buzzer buzzer-off"; // Gray/Off
-                }
-            })
-            .catch(err => console.log('Fetch error:', err));
-        }
-
-        function setNewThreshold() {
-            const newTh = parseFloat(document.getElementById('threshold-input').value);
-
-            fetch(endpoint_set, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ threshold: newTh })
-            })
-            .then(res => res.json())
-            .then(data => {
-                const msg = document.getElementById('threshold-status');
-                msg.textContent = data.message || data.error;
-                msg.style.color = data.error ? 'red' : 'lime';
-
-                setTimeout(() => msg.textContent = '', 3000);
-            });
-        }
-
-        setInterval(fetchData, 3000);
-        fetchData();
-    </script>
-
-</body>
-</html>
+      <section class="card span-8">
+        <div class="small muted">Event Log & Commands</div>
+        <div class="log" id="log"></div>
+        <div style="display:flex;gap:10px;margin-top:10px">
+          <input id="cmdInput" placeholder='{"cmd":"buzz
