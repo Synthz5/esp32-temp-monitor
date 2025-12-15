@@ -6,6 +6,7 @@
   <title>ESP32 · DHT22 Dashboard</title>
 
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
   <style>
     :root{
@@ -58,10 +59,7 @@
       color:#e6f7ff;
     }
 
-    .status{
-      margin-top:10px;
-      font-weight:700;
-    }
+    canvas{max-height:260px}
 
     @media(max-width:900px){
       .grid{grid-template-columns:1fr}
@@ -74,7 +72,7 @@
 <div class="wrap">
   <header>
     <div class="brand">ESP32 · DHT22 Dashboard</div>
-    <div class="sub">Real-time temperature & humidity — remote buzzer control</div>
+    <div class="sub">Real-time temperature & humidity — live chart history</div>
   </header>
 
   <main class="grid">
@@ -97,21 +95,56 @@
       <div class="muted">DHT22 sensor</div>
     </section>
 
-    <!-- BUZZER STATUS -->
+    <!-- BUZZER -->
     <section class="card">
       <div class="small muted">Buzzer</div>
-      <div id="buzzerState" class="status muted">OFF</div>
+      <div id="buzzerState" class="big muted">OFF</div>
+    </section>
+
+    <!-- CHART -->
+    <section class="card" style="grid-column:span 3">
+      <div class="small muted">Temperature History (Live)</div>
+      <canvas id="tempChart"></canvas>
     </section>
 
   </main>
 </div>
 
-<!-- ✅ JAVASCRIPT -->
 <script>
-async function loadInitialData() {
+const MAX_POINTS = 30;   // how many history points to keep
+const labels = [];
+const tempData = [];
+
+const ctx = document.getElementById('tempChart').getContext('2d');
+const tempChart = new Chart(ctx, {
+  type: 'line',
+  data: {
+    labels,
+    datasets: [{
+      label: 'Temperature (°C)',
+      data: tempData,
+      tension: 0.3,
+      borderWidth: 2
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { labels: { color: '#e6f7ff' } }
+    },
+    scales: {
+      x: { ticks: { color: '#aaa' } },
+      y: { ticks: { color: '#aaa' } }
+    }
+  }
+});
+
+async function fetchData() {
   try {
     const res = await fetch('/api/get_data');
     const data = await res.json();
+
+    const now = new Date().toLocaleTimeString();
 
     document.getElementById('tempVal').textContent =
       data.temperature.toFixed(1) + ' °C';
@@ -124,8 +157,18 @@ async function loadInitialData() {
     document.getElementById('buzzerState').textContent =
       data.temperature >= data.threshold ? 'ON' : 'OFF';
 
+    labels.push(now);
+    tempData.push(data.temperature);
+
+    if (labels.length > MAX_POINTS) {
+      labels.shift();
+      tempData.shift();
+    }
+
+    tempChart.update();
+
   } catch (e) {
-    console.error('Failed to load data', e);
+    console.error('Data fetch failed', e);
   }
 }
 
@@ -137,7 +180,9 @@ document.getElementById('thresholdInput').addEventListener('change', async (e) =
   });
 });
 
-window.addEventListener('load', loadInitialData);
+// initial + live updates
+fetchData();
+setInterval(fetchData, 2000);
 </script>
 
 </body>
