@@ -3,122 +3,147 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>ESP32 · DHT22 · High‑Tech Dashboard</title>
+  <title>ESP32 · DHT22 Dashboard</title>
+
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
   <style>
     :root{
-      --bg:#041025; --card:#061827; --accent:#00f6ff; --accent-2:#7c4dff; --glass: rgba(255,255,255,0.04);
-      --success:#25d366; --danger:#ff3860; --muted:rgba(255,255,255,0.55);
+      --bg:#041025;
+      --card:#061827;
+      --accent:#00f6ff;
+      --accent-2:#7c4dff;
+      --success:#25d366;
+      --danger:#ff3860;
+      --muted:rgba(255,255,255,0.55);
     }
+
     *{box-sizing:border-box}
-    html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,'Helvetica Neue',Arial;color:#e6f7ff;background:linear-gradient(180deg,#00101a 0%,#041025 60%);-webkit-font-smoothing:antialiased}
-    .wrap{max-width:1200px;margin:28px auto;padding:24px}
-    header{display:flex;gap:20px;align-items:center;margin-bottom:18px}
-    .logo{display:flex;flex-direction:column}
-    .brand{font-weight:800;font-size:20px;letter-spacing:0.4px}
-    .sub{color:var(--muted);font-size:12px}
+    body{
+      margin:0;
+      font-family:Inter,system-ui;
+      color:#e6f7ff;
+      background:linear-gradient(180deg,#00101a 0%,#041025 60%);
+    }
 
-    .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:18px}
-    .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border:1px solid rgba(255,255,255,0.04);padding:18px;border-radius:14px;box-shadow:0 6px 18px rgba(3,6,12,0.6)}
-    .span-4{grid-column:span 4}
-    .span-8{grid-column:span 8}
-    .flex{display:flex;align-items:center;gap:12px}
+    .wrap{max-width:1100px;margin:30px auto;padding:20px}
+    header{margin-bottom:20px}
+    .brand{font-size:22px;font-weight:800}
+    .sub{font-size:13px;color:var(--muted)}
 
-    .big-value{font-size:44px;font-weight:700}
+    .grid{
+      display:grid;
+      grid-template-columns:repeat(3,1fr);
+      gap:18px;
+    }
+
+    .card{
+      background:linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+      border:1px solid rgba(255,255,255,0.05);
+      padding:18px;
+      border-radius:14px;
+      box-shadow:0 8px 20px rgba(0,0,0,0.5);
+    }
+
+    .big{font-size:44px;font-weight:700}
     .muted{color:var(--muted)}
+    .small{font-size:13px}
 
-    .controls{display:flex;gap:10px;align-items:center}
-    .btn{background:linear-gradient(90deg,var(--accent),var(--accent-2));border:none;color:#00111a;padding:8px 12px;border-radius:10px;font-weight:600;cursor:pointer}
-    .btn-ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--muted)}
+    input[type=number]{
+      width:80px;
+      padding:6px;
+      border-radius:6px;
+      border:1px solid rgba(255,255,255,0.2);
+      background:transparent;
+      color:#e6f7ff;
+    }
 
-    .threshold{display:flex;gap:8px;align-items:center}
-    input[type=range]{width:180px}
+    .status{
+      margin-top:10px;
+      font-weight:700;
+    }
 
-    .status-dot{width:12px;height:12px;border-radius:999px;background:var(--danger);box-shadow:0 0 8px rgba(255,0,0,0.14)}
-    .status-ok{background:var(--success);box-shadow:0 0 8px rgba(37,211,102,0.14)}
-
-    .chart-wrap{height:260px}
-    .log{max-height:220px;overflow:auto;font-size:13px;color:var(--muted);padding:8px;border-radius:8px;background:linear-gradient(180deg, rgba(255,255,255,0.01), transparent)}
-
-    footer{margin-top:18px;color:var(--muted);font-size:13px}
-
-    /* Fancy gauge */
-    .gauge{width:170px;height:170px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--accent) 0deg, transparent 0deg);position:relative}
-    .gauge .center{position:absolute;display:flex;flex-direction:column;align-items:center}
-    .small{font-size:13px;color:var(--muted)}
-
-    @media (max-width:960px){.grid{grid-template-columns:repeat(6,1fr)}.span-8{grid-column:span 6}.span-4{grid-column:span 6}}
+    @media(max-width:900px){
+      .grid{grid-template-columns:1fr}
+    }
   </style>
 </head>
+
 <body>
-  <div class="wrap">
-    <header>
-      <div class="logo">
-        <div class="brand">ESP32 · DHT22 Dashboard</div>
-        <div class="sub">Real-time temperature & humidity monitoring — advanced UI with remote buzzer control</div>
-      </div>
-      <div style="margin-left:auto" class="controls">
-        <div id="wsStatus" class="flex"><div id="statusDot" class="status-dot"></div><div id="statusText" style="min-width:120px" class="muted">Disconnected</div></div>
-        
-        
-      </div>
-    </header>
 
-    <main class="grid">
-      <section class="card span-4">
-        <div class="flex" style="justify-content:space-between;align-items:center">
-          <div>
-            <div class="small muted">Temperature</div>
-            <div class="big-value" id="tempVal">-- °C</div>
-            <div class="muted">Feels like: <span id="feels">-- °C</span></div>
+<div class="wrap">
+  <header>
+    <div class="brand">ESP32 · DHT22 Dashboard</div>
+    <div class="sub">Real-time temperature & humidity — remote buzzer control</div>
+  </header>
 
-<!-- NEW: Temperature threshold inside temperature box -->
-<div class="threshold" style="margin-top:12px">
-  <div class="small muted">Temp threshold (°C)</div>
-  <input id="thresholdInput" type="number" min="0" max="100" value="30" style="width:70px;padding:4px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:#e6f7ff">
+  <main class="grid">
+
+    <!-- TEMPERATURE -->
+    <section class="card">
+      <div class="small muted">Temperature</div>
+      <div class="big" id="tempVal">-- °C</div>
+      <div class="muted">Feels like: <span id="feels">-- °C</span></div>
+
+      <div style="margin-top:12px">
+        <div class="small muted">Temp threshold (°C)</div>
+        <input id="thresholdInput" type="number" min="0" max="100">
+      </div>
+    </section>
+
+    <!-- HUMIDITY -->
+    <section class="card">
+      <div class="small muted">Humidity</div>
+      <div class="big" id="humVal">-- %</div>
+      <div class="muted">DHT22 sensor</div>
+    </section>
+
+    <!-- BUZZER STATUS -->
+    <section class="card">
+      <div class="small muted">Buzzer</div>
+      <div id="buzzerState" class="status muted">OFF</div>
+    </section>
+
+  </main>
 </div>
-          </div>
-          <div style="display:flex;flex-direction:column;align-items:center;gap:8px">
-            <div style="width:170px;height:170px;">
-              <div id="gauge" class="gauge" aria-hidden="true"></div>
-            </div>
-            
-          </div>
-        </div>
-      </section>
 
-      <section class="card span-4">
-        <div class="small muted">Humidity</div>
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <div>
-            <div class="big-value" id="humVal">-- %</div>
-            <div class="muted">DHT22 sensor</div>
-          </div>
-          
-        </div>
-        <hr style="opacity:0.06;margin:14px 0">
-        
-          
-          
-        </div>
-        <div style="margin-top:10px;display:flex;gap:8px">
-          
-          <button id="autoBuzzToggle" class="btn-ghost">Auto-Buzz: OFF</button>
-        </div>
-      </section>
+<!-- ✅ JAVASCRIPT (MUST BE HERE) -->
+<script>
+async function loadInitialData() {
+  try {
+    const res = await fetch('/api/get_data');
+    const data = await res.json();
 
-      <section class="card span-4">
-        <div class="small muted">Live Chart (temperature)</div>
-        <div class="chart-wrap"><canvas id="tempChart"></canvas></div>
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px">
-          <div class="muted">Samples: <span id="samples">0</span></div>
-          <div id="buzzerIndicator" style="font-weight:700;color:var(--muted)">Buzzer: OFF</div>
-        </div>
-      </section>
+    document.getElementById('tempVal').textContent =
+      data.temperature.toFixed(1) + ' °C';
 
-      <section class="card span-8">
-        <div class="small muted">Event Log & Commands</div>
-        <div class="log" id="log"></div>
-        <div style="display:flex;gap:10px;margin-top:10px">
-          <input id="cmdInput" placeholder='{"cmd":"buzz
+    document.getElementById('feels').textContent =
+      data.temperature.toFixed(1) + ' °C';
+
+    document.getElementById('humVal').textContent =
+      data.humidity.toFixed(1) + ' %';
+
+    // 🔑 This prevents reset on reload
+    document.getElementById('thresholdInput').value = data.threshold;
+
+    document.getElementById('buzzerState').textContent =
+      data.temperature >= data.threshold ? 'ON' : 'OFF';
+
+  } catch (e) {
+    console.error('Failed to load data', e);
+  }
+}
+
+document.getElementById('thresholdInput').addEventListener('change', async (e) => {
+  await fetch('/api/set_threshold', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ threshold: e.target.value })
+  });
+});
+
+window.addEventListener('load', loadInitialData);
+</script>
+
+</body>
+</html>
