@@ -1,121 +1,12 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>ESP32 · DHT22 Dashboard</title>
-
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-
-  <style>
-    :root{
-      --bg:#041025;
-      --card:#061827;
-      --accent:#00f6ff;
-      --accent-2:#7c4dff;
-      --success:#25d366;
-      --danger:#ff3860;
-      --muted:rgba(255,255,255,0.55);
-    }
-
-    *{box-sizing:border-box}
-    body{
-      margin:0;
-      font-family:Inter,system-ui;
-      color:#e6f7ff;
-      background:linear-gradient(180deg,#00101a 0%,#041025 60%);
-    }
-
-    .wrap{max-width:1100px;margin:30px auto;padding:20px}
-    header{margin-bottom:20px}
-    .brand{font-size:22px;font-weight:800}
-    .sub{font-size:13px;color:var(--muted)}
-
-    .grid{
-      display:grid;
-      grid-template-columns:repeat(3,1fr);
-      gap:18px;
-    }
-
-    .card{
-      background:linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
-      border:1px solid rgba(255,255,255,0.05);
-      padding:18px;
-      border-radius:14px;
-      box-shadow:0 8px 20px rgba(0,0,0,0.5);
-    }
-
-    .big{font-size:44px;font-weight:700}
-    .muted{color:var(--muted)}
-    .small{font-size:13px}
-
-    input[type=number]{
-      width:80px;
-      padding:6px;
-      border-radius:6px;
-      border:1px solid rgba(255,255,255,0.2);
-      background:transparent;
-      color:#e6f7ff;
-    }
-
-    canvas{max-height:260px}
-
-    @media(max-width:900px){
-      .grid{grid-template-columns:1fr}
-    }
-  </style>
-</head>
-
-<body>
-
-<div class="wrap">
-  <header>
-    <div class="brand">ESP32 · DHT22 Dashboard</div>
-    <div class="sub">Real-time temperature & humidity — live chart history</div>
-  </header>
-
-  <main class="grid">
-
-    <!-- TEMPERATURE -->
-    <section class="card">
-      <div class="small muted">Temperature</div>
-      <div class="big" id="tempVal">-- °C</div>
-
-      <div style="margin-top:12px">
-        <div class="small muted">Temp threshold (°C)</div>
-        <input id="thresholdInput" type="number" min="0" max="100">
-      </div>
-    </section>
-
-    <!-- HUMIDITY -->
-    <section class="card">
-      <div class="small muted">Humidity</div>
-      <div class="big" id="humVal">-- %</div>
-      <div class="muted">DHT22 sensor</div>
-    </section>
-
-    <!-- BUZZER -->
-    <section class="card">
-      <div class="small muted">Buzzer</div>
-      <div id="buzzerState" class="big muted">OFF</div>
-    </section>
-
-    <!-- CHART -->
-    <section class="card" style="grid-column:span 3">
-      <div class="small muted">Temperature History (Live)</div>
-      <canvas id="tempChart"></canvas>
-    </section>
-
-  </main>
-</div>
-
 <script>
-const MAX_POINTS = 30;   // how many history points to keep
+const MAX_POINTS = 30;
 const labels = [];
 const tempData = [];
 
+const thresholdInput = document.getElementById('thresholdInput');
 const ctx = document.getElementById('tempChart').getContext('2d');
+
+/* ------------------ CHART ------------------ */
 const tempChart = new Chart(ctx, {
   type: 'line',
   data: {
@@ -139,7 +30,19 @@ const tempChart = new Chart(ctx, {
   }
 });
 
-async function fetchData() {
+/* ---------- LOAD THRESHOLD ONCE ---------- */
+async function loadThresholdOnce() {
+  try {
+    const res = await fetch('/api/get_data');
+    const data = await res.json();
+    thresholdInput.value = data.threshold;
+  } catch (e) {
+    console.error('Failed to load threshold', e);
+  }
+}
+
+/* ---------- LIVE DATA FETCH ---------- */
+async function fetchLiveData() {
   try {
     const res = await fetch('/api/get_data');
     const data = await res.json();
@@ -151,8 +54,6 @@ async function fetchData() {
 
     document.getElementById('humVal').textContent =
       data.humidity.toFixed(1) + ' %';
-
-    document.getElementById('thresholdInput').value = data.threshold;
 
     document.getElementById('buzzerState').textContent =
       data.temperature >= data.threshold ? 'ON' : 'OFF';
@@ -168,22 +69,25 @@ async function fetchData() {
     tempChart.update();
 
   } catch (e) {
-    console.error('Data fetch failed', e);
+    console.error('Live update failed', e);
   }
 }
 
-document.getElementById('thresholdInput').addEventListener('change', async (e) => {
-  await fetch('/api/set_threshold', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ threshold: e.target.value })
-  });
+/* ---------- SEND THRESHOLD (DEBOUNCED) ---------- */
+let thresholdTimeout;
+thresholdInput.addEventListener('input', () => {
+  clearTimeout(thresholdTimeout);
+  thresholdTimeout = setTimeout(async () => {
+    await fetch('/api/set_threshold', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ threshold: thresholdInput.value })
+    });
+  }, 600); // send after user stops typing
 });
 
-// initial + live updates
-fetchData();
-setInterval(fetchData, 2000);
+/* ---------- INIT ---------- */
+loadThresholdOnce();
+fetchLiveData();
+setInterval(fetchLiveData, 2000);
 </script>
-
-</body>
-</html>
