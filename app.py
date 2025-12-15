@@ -7,7 +7,7 @@ app = Flask(__name__)
 # NOTE: For production, you would use a database (like PostgreSQL) instead of global vars.
 current_temp = 0.0
 current_humidity = 0.0
-threshold_temp = 28.0 # Default threshold in Celsius
+threshold_temp = 35.0 # Default threshold in Celsius
 
 @app.route('/')
 def index():
