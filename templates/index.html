@@ -106,7 +106,7 @@
   </main>
 </div>
 
-<!-- ✅ JAVASCRIPT (MUST BE HERE) -->
+<!-- ✅ JAVASCRIPT -->
 <script>
 async function loadInitialData() {
   try {
@@ -116,13 +116,9 @@ async function loadInitialData() {
     document.getElementById('tempVal').textContent =
       data.temperature.toFixed(1) + ' °C';
 
-    document.getElementById('feels').textContent =
-      data.temperature.toFixed(1) + ' °C';
-
     document.getElementById('humVal').textContent =
       data.humidity.toFixed(1) + ' %';
 
-    // 🔑 This prevents reset on reload
     document.getElementById('thresholdInput').value = data.threshold;
 
     document.getElementById('buzzerState').textContent =
